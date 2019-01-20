@@ -3,9 +3,12 @@
 # To build executable: $ pyinstaller pyle.spec
 
 NAME = 'pyle'
-ASSETS = [('resources', 'resources')]
+# ASSETS = [('resources', 'resources')]
+ASSETS = None
 CODE = [
-    'pyle/main.py'
+    'pyle/main.py',
+    'pyle/settings.py',
+    'pyle/sprites.py'
 ]
 
 DEBUG = False
