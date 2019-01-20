@@ -1,0 +1,42 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "pyinstaller pyle.spec",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": ["rm -rf ./build/", "rm -rf ./dist/"],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "play",
+            "type": "process",
+            "command": "${config:python.pythonPath}",
+            "args": ["./pyle/main.py"],
+            "options": {
+                "env": {
+                    "PYTHONPATH": "${workspaceRoot}"
+                }
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "execute",
+            "dependsOn": ["build"],
+            "type": "process",
+            "command": "${workspaceRoot}/dist/pyle.exe",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
