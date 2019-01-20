@@ -4,6 +4,22 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "play",
+            "type": "process",
+            "command": "${config:python.pythonPath}",
+            "args": ["./pyle/main.py"],
+            "options": {
+                "env": {
+                    "PYTHONPATH": "${workspaceRoot}"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "build",
             "type": "shell",
             "command": "pyinstaller pyle.spec",
@@ -14,19 +30,6 @@
             "label": "clean",
             "type": "shell",
             "command": ["rm -rf ./build/", "rm -rf ./dist/"],
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "play",
-            "type": "process",
-            "command": "${config:python.pythonPath}",
-            "args": ["./pyle/main.py"],
-            "options": {
-                "env": {
-                    "PYTHONPATH": "${workspaceRoot}"
-                }
-            },
             "group": "build",
             "problemMatcher": []
         },

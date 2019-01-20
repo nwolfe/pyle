@@ -1,7 +1,12 @@
 import os
 import sys
+import pygame as pg
+from pyle.settings import TITLE, WIDTH, HEIGHT, FPS
+from pyle.settings import TILESIZE
+from pyle.settings import BGCOLOR, LIGHTGREY
+from pyle.sprites import Player, Wall
+from pyle.tilemap import Map, Camera
 
-from pyle.sprites import *
 
 # Support running from single .exe (via PyInstaller)
 if getattr(sys, 'frozen', False):
@@ -27,26 +32,25 @@ class Game:
         self.all_sprites = None
         self.player = None
         self.walls = None
+        self.camera = None
 
         # Resources from disk
-        self.map_data = None
+        self.map = None
         self.load_data()
 
     def load_data(self):
-        self.map_data = []
-        with open(os.path.join(RESOURCE_DIR, 'map.txt'), 'r') as file:
-            for line in file:
-                self.map_data.append(line)
+        self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
         self.walls = pg.sprite.Group()
-        for row, tiles in enumerate(self.map_data):
+        for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == '1':
                     Wall(self, col, row)
                 if tile == 'P':
                     self.player = Player(self, col, row)
+        self.camera = Camera(self.map.width, self.map.height)
 
     def run(self):
         self.playing = True
@@ -62,11 +66,13 @@ class Game:
 
     def update(self):
         self.all_sprites.update()
+        self.camera.update(self.player)
 
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.draw_grid()
-        self.all_sprites.draw(self.screen)
+        for sprite in self.all_sprites:
+            self.screen.blit(sprite.image, self.camera.apply(sprite))
         pg.display.flip()
 
     def draw_grid(self):

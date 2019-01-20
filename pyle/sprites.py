@@ -1,6 +1,6 @@
 import pygame as pg
-
-from pyle.settings import *
+from pyle.settings import TILESIZE, PLAYER_SPEED
+from pyle.settings import YELLOW, GREEN
 
 
 class Player(pg.sprite.Sprite):
