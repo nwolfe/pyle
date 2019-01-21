@@ -2,9 +2,9 @@ import os
 import sys
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS
-from pyle.settings import TILESIZE
+from pyle.settings import TILESIZE, WALL_IMG
 from pyle.settings import BGCOLOR, LIGHTGREY
-from pyle.sprites import Player, Wall, Spritesheet
+from pyle.sprites import Player, Wall, Spritesheet, Mob
 from pyle.tilemap import Map, Camera
 
 
@@ -32,12 +32,14 @@ class Game:
         self.all_sprites = None
         self.player = None
         self.walls = None
+        self.mobs = None
         self.camera = None
 
         # Resources from disk
         self.spritesheet_characters = None
         self.spritesheet_tiles = None
         self.map = None
+        self.wall_img = None
         self.load_data()
 
     def load_data(self):
@@ -46,14 +48,20 @@ class Game:
         self.spritesheet_tiles = Spritesheet(
             os.path.join(IMG_DIR, 'spritesheet_tiles.png'))
         self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
+        self.wall_img = pg.image.load(
+            os.path.join(IMG_DIR, WALL_IMG)).convert_alpha()
+        self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
         self.walls = pg.sprite.Group()
+        self.mobs = pg.sprite.Group()
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
                 if tile == '1':
                     Wall(self, col, row)
+                if tile == 'M':
+                    Mob(self, col, row)
                 if tile == 'P':
                     self.player = Player(self, col, row)
         self.camera = Camera(self.map.width, self.map.height)
@@ -75,8 +83,9 @@ class Game:
         self.camera.update(self.player)
 
     def draw(self):
+        pg.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
-        self.draw_grid()
+        # self.draw_grid()
         for sprite in self.all_sprites:
             self.screen.blit(sprite.image, self.camera.apply(sprite))
         pg.display.flip()

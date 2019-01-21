@@ -1,7 +1,7 @@
 import pygame as pg
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
-from pyle.settings import TILESIZE, GREEN, BLACK, PLAYER_HIT_RECT
+from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, MOB_IMG
 
 
 class Spritesheet:
@@ -33,7 +33,7 @@ class Player(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
         self.image = self.game.spritesheet_characters.get_image(PLAYER_IMG)
-        self.orig_image = self.image
+        self.image_orig = self.image
         self.rect = self.image.get_rect()
         self.hit_rect = PLAYER_HIT_RECT
         self.hit_rect.center = self.rect.center
@@ -45,7 +45,7 @@ class Player(pg.sprite.Sprite):
     def update(self):
         self._handle_keys()
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
-        self.image = pg.transform.rotate(self.orig_image, self.rot)
+        self.image = pg.transform.rotate(self.image_orig, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
         self.pos += self.vel * self.game.dt
@@ -104,10 +104,27 @@ class Wall(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.walls)
         self.game = game
-        self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(GREEN)
+        self.image = self.game.wall_img
         self.rect = self.image.get_rect()
         self.x = x
         self.y = y
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
+
+
+class Mob(pg.sprite.Sprite):
+    def __init__(self, game, x, y):
+        pg.sprite.Sprite.__init__(self, game.all_sprites, game.mobs)
+        self.game = game
+        self.image = self.game.spritesheet_characters.get_image(MOB_IMG)
+        self.image_orig = self.image
+        self.rect = self.image.get_rect()
+        self.pos = pg.Vector2(x, y) * TILESIZE
+        self.rect.center = self.pos
+        self.rot = 0
+
+    def update(self):
+        self.rot = (self.game.player.pos - self.pos).angle_to(pg.Vector2(1, 0))
+        self.image = pg.transform.rotate(self.image_orig, self.rot)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
