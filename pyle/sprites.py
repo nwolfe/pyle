@@ -1,7 +1,7 @@
 import pygame as pg
 import xml.etree.ElementTree as xml
-from pyle.settings import TILESIZE, PLAYER_SPEED, PLAYER_IMG
-from pyle.settings import GREEN, BLACK
+from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
+from pyle.settings import TILESIZE, GREEN, BLACK, PLAYER_HIT_RECT
 
 
 class Spritesheet:
@@ -33,56 +33,71 @@ class Player(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
         self.image = self.game.spritesheet_characters.get_image(PLAYER_IMG)
+        self.orig_image = self.image
         self.rect = self.image.get_rect()
-        self.vel = pg.math.Vector2(0, 0)
-        self.pos = pg.math.Vector2(x, y) * TILESIZE
+        self.hit_rect = PLAYER_HIT_RECT
+        self.hit_rect.center = self.rect.center
+        self.vel = pg.Vector2(0, 0)
+        self.pos = pg.Vector2(x, y) * TILESIZE
+        self.rot = 0
+        self.rot_speed = 0
 
     def update(self):
         self._handle_keys()
+        self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
+        self.image = pg.transform.rotate(self.orig_image, self.rot)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
         self.pos += self.vel * self.game.dt
-        self.rect.x = self.pos.x
+        self.hit_rect.centerx = self.pos.x
         self._collide_with_walls('x')
-        self.rect.y = self.pos.y
+        self.hit_rect.centery = self.pos.y
         self._collide_with_walls('y')
+        self.rect.center = self.hit_rect.center
 
     def _handle_keys(self):
+        self.rot_speed = 0
         self.vel = pg.math.Vector2(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT] or keys[pg.K_a]:
-            self.vel.x = -PLAYER_SPEED
+            self.rot_speed = PLAYER_ROTATION_SPEED
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
-            self.vel.x = PLAYER_SPEED
+            self.rot_speed = -PLAYER_ROTATION_SPEED
         if keys[pg.K_UP] or keys[pg.K_w]:
-            self.vel.y = -PLAYER_SPEED
+            self.vel = pg.Vector2(PLAYER_SPEED, 0).rotate(-self.rot)
         if keys[pg.K_DOWN] or keys[pg.K_s]:
-            self.vel.y = PLAYER_SPEED
-        if self.vel.x != 0 and self.vel.y != 0:
-            self.vel *= 0.7071
+            self.vel = pg.Vector2(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
 
     def move(self, dx=0, dy=0):
         if not self._collide_with_walls(dx, dy):
             self.x += dx
             self.y += dy
 
+    @staticmethod
+    def _collide_hit_rect(a, b):
+        return a.hit_rect.colliderect(b.rect)
+
     def _collide_with_walls(self, dir):
         if 'x' == dir:
-            hits = pg.sprite.spritecollide(self, self.game.walls, False)
+            hits = pg.sprite.spritecollide(self, self.game.walls,
+                                           False, Player._collide_hit_rect)
             if hits:
                 if self.vel.x > 0:
-                    self.pos.x = hits[0].rect.left - self.rect.width
+                    self.pos.x = hits[0].rect.left - self.hit_rect.width / 2
                 if self.vel.x < 0:
-                    self.pos.x = hits[0].rect.right
+                    self.pos.x = hits[0].rect.right + self.hit_rect.width / 2
                 self.vel.x = 0
-                self.rect.x = self.pos.x
+                self.hit_rect.centerx = self.pos.x
         elif 'y' == dir:
-            hits = pg.sprite.spritecollide(self, self.game.walls, False)
+            hits = pg.sprite.spritecollide(self, self.game.walls,
+                                           False, Player._collide_hit_rect)
             if hits:
                 if self.vel.y > 0:
-                    self.pos.y = hits[0].rect.top - self.rect.height
+                    self.pos.y = hits[0].rect.top - self.hit_rect.height / 2
                 if self.vel.y < 0:
-                    self.pos.y = hits[0].rect.bottom
+                    self.pos.y = hits[0].rect.bottom + self.hit_rect.height / 2
                 self.vel.y = 0
-                self.rect.y = self.pos.y
+                self.hit_rect.centery = self.pos.y
 
 
 class Wall(pg.sprite.Sprite):
