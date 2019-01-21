@@ -19,3 +19,4 @@ BGCOLOR = DARKGREY
 
 # Player settings
 PLAYER_SPEED = 300
+PLAYER_IMG = 'manBlue_gun.png'

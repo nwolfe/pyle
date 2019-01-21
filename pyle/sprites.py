@@ -1,42 +1,63 @@
 import pygame as pg
-from pyle.settings import TILESIZE, PLAYER_SPEED
-from pyle.settings import YELLOW, GREEN
+import xml.etree.ElementTree as xml
+from pyle.settings import TILESIZE, PLAYER_SPEED, PLAYER_IMG
+from pyle.settings import GREEN, BLACK
+
+
+class Spritesheet:
+    def __init__(self, filename):
+        self.spritesheet = pg.image.load(filename).convert()
+        try:
+            self.coords = xml.parse(filename.replace('png', 'xml')).getroot()
+        except Exception:
+            self.coords = None
+
+    def get_image_at(self, x, y, width, height):
+        image = pg.Surface((width, height))
+        image.blit(self.spritesheet, (0, 0), (x, y, width, height))
+        # image = pg.transform.scale(image, (width // 2, height // 2))
+        image.set_colorkey(BLACK)
+        return image
+
+    def get_image(self, name):
+        props = self.coords.find(".//SubTexture[@name='%s']" % name).attrib
+        x = int(props['x'])
+        y = int(props['y'])
+        width = int(props['width'])
+        height = int(props['height'])
+        return self.get_image_at(x, y, width, height)
 
 
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
-        self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(YELLOW)
+        self.image = self.game.spritesheet_characters.get_image(PLAYER_IMG)
         self.rect = self.image.get_rect()
-        self.vx, self.vy = 0, 0
-        self.x = x * TILESIZE
-        self.y = y * TILESIZE
+        self.vel = pg.math.Vector2(0, 0)
+        self.pos = pg.math.Vector2(x, y) * TILESIZE
 
     def update(self):
         self._handle_keys()
-        self.x += self.vx * self.game.dt
-        self.y += self.vy * self.game.dt
-        self.rect.x = self.x
+        self.pos += self.vel * self.game.dt
+        self.rect.x = self.pos.x
         self._collide_with_walls('x')
-        self.rect.y = self.y
+        self.rect.y = self.pos.y
         self._collide_with_walls('y')
 
     def _handle_keys(self):
-        self.vx, self.vy = 0, 0
+        self.vel = pg.math.Vector2(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT] or keys[pg.K_a]:
-            self.vx = -PLAYER_SPEED
+            self.vel.x = -PLAYER_SPEED
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
-            self.vx = PLAYER_SPEED
+            self.vel.x = PLAYER_SPEED
         if keys[pg.K_UP] or keys[pg.K_w]:
-            self.vy = -PLAYER_SPEED
+            self.vel.y = -PLAYER_SPEED
         if keys[pg.K_DOWN] or keys[pg.K_s]:
-            self.vy = PLAYER_SPEED
-        if self.vx != 0 and self.vy != 0:
-            self.vx *= 0.7071
-            self.vy *= 0.7071
+            self.vel.y = PLAYER_SPEED
+        if self.vel.x != 0 and self.vel.y != 0:
+            self.vel *= 0.7071
 
     def move(self, dx=0, dy=0):
         if not self._collide_with_walls(dx, dy):
@@ -47,21 +68,21 @@ class Player(pg.sprite.Sprite):
         if 'x' == dir:
             hits = pg.sprite.spritecollide(self, self.game.walls, False)
             if hits:
-                if self.vx > 0:
-                    self.x = hits[0].rect.left - self.rect.width
-                if self.vx < 0:
-                    self.x = hits[0].rect.right
-                self.vx = 0
-                self.rect.x = self.x
+                if self.vel.x > 0:
+                    self.pos.x = hits[0].rect.left - self.rect.width
+                if self.vel.x < 0:
+                    self.pos.x = hits[0].rect.right
+                self.vel.x = 0
+                self.rect.x = self.pos.x
         elif 'y' == dir:
             hits = pg.sprite.spritecollide(self, self.game.walls, False)
             if hits:
-                if self.vy > 0:
-                    self.y = hits[0].rect.top - self.rect.height
-                if self.vy < 0:
-                    self.y = hits[0].rect.bottom
-                self.vy = 0
-                self.rect.y = self.y
+                if self.vel.y > 0:
+                    self.pos.y = hits[0].rect.top - self.rect.height
+                if self.vel.y < 0:
+                    self.pos.y = hits[0].rect.bottom
+                self.vel.y = 0
+                self.rect.y = self.pos.y
 
 
 class Wall(pg.sprite.Sprite):

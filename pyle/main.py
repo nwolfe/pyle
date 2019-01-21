@@ -4,7 +4,7 @@ import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS
 from pyle.settings import TILESIZE
 from pyle.settings import BGCOLOR, LIGHTGREY
-from pyle.sprites import Player, Wall
+from pyle.sprites import Player, Wall, Spritesheet
 from pyle.tilemap import Map, Camera
 
 
@@ -35,10 +35,16 @@ class Game:
         self.camera = None
 
         # Resources from disk
+        self.spritesheet_characters = None
+        self.spritesheet_tiles = None
         self.map = None
         self.load_data()
 
     def load_data(self):
+        self.spritesheet_characters = Spritesheet(
+            os.path.join(IMG_DIR, 'spritesheet_characters.png'))
+        self.spritesheet_tiles = Spritesheet(
+            os.path.join(IMG_DIR, 'spritesheet_tiles.png'))
         self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
 
     def new(self):
