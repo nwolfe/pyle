@@ -7,10 +7,10 @@
             "label": "play",
             "type": "process",
             "command": "${config:python.pythonPath}",
-            "args": ["./pyle/main.py"],
+            "args": ["./${workspaceFolderBasename}/main.py"],
             "options": {
                 "env": {
-                    "PYTHONPATH": "${workspaceRoot}"
+                    "PYTHONPATH": "${workspaceFolder}"
                 }
             },
             "group": {
@@ -22,14 +22,14 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "pyinstaller pyle.spec",
+            "command": "pyinstaller ${workspaceFolderBasename}.spec",
             "group": "build",
             "problemMatcher": []
         },
         {
             "label": "clean",
             "type": "shell",
-            "command": ["rm -rf ./build/", "rm -rf ./dist/"],
+            "command": "rm -rfv ${workspaceFolder}/{build,dist}/",
             "group": "build",
             "problemMatcher": []
         },
@@ -37,7 +37,7 @@
             "label": "execute",
             "dependsOn": ["build"],
             "type": "process",
-            "command": "${workspaceRoot}/dist/pyle.exe",
+            "command": "${workspaceFolder}/dist/${workspaceFolderBasename}.exe",
             "group": "build",
             "problemMatcher": []
         }
