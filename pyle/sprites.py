@@ -1,7 +1,33 @@
 import pygame as pg
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
-from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, MOB_IMG
+from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT
+from pyle.settings import MOB_IMG, MOB_SPEED, MOB_HIT_RECT
+
+
+def collide_hit_rect(a, b):
+    return a.hit_rect.colliderect(b.rect)
+
+
+def collide_with_walls(sprite, group, dir):
+    if 'x' == dir:
+        hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
+        if hits:
+            if sprite.vel.x > 0:
+                sprite.pos.x = hits[0].rect.left - sprite.hit_rect.width / 2
+            if sprite.vel.x < 0:
+                sprite.pos.x = hits[0].rect.right + sprite.hit_rect.width / 2
+            sprite.vel.x = 0
+            sprite.hit_rect.centerx = sprite.pos.x
+    elif 'y' == dir:
+        hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
+        if hits:
+            if sprite.vel.y > 0:
+                sprite.pos.y = hits[0].rect.top - sprite.hit_rect.height / 2
+            if sprite.vel.y < 0:
+                sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2
+            sprite.vel.y = 0
+            sprite.hit_rect.centery = sprite.pos.y
 
 
 class Spritesheet:
@@ -50,9 +76,9 @@ class Player(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.pos += self.vel * self.game.dt
         self.hit_rect.centerx = self.pos.x
-        self._collide_with_walls('x')
+        collide_with_walls(self, self.game.walls, 'x')
         self.hit_rect.centery = self.pos.y
-        self._collide_with_walls('y')
+        collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
 
     def _handle_keys(self):
@@ -67,37 +93,6 @@ class Player(pg.sprite.Sprite):
             self.vel = pg.Vector2(PLAYER_SPEED, 0).rotate(-self.rot)
         if keys[pg.K_DOWN] or keys[pg.K_s]:
             self.vel = pg.Vector2(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
-
-    def move(self, dx=0, dy=0):
-        if not self._collide_with_walls(dx, dy):
-            self.x += dx
-            self.y += dy
-
-    @staticmethod
-    def _collide_hit_rect(a, b):
-        return a.hit_rect.colliderect(b.rect)
-
-    def _collide_with_walls(self, dir):
-        if 'x' == dir:
-            hits = pg.sprite.spritecollide(self, self.game.walls,
-                                           False, Player._collide_hit_rect)
-            if hits:
-                if self.vel.x > 0:
-                    self.pos.x = hits[0].rect.left - self.hit_rect.width / 2
-                if self.vel.x < 0:
-                    self.pos.x = hits[0].rect.right + self.hit_rect.width / 2
-                self.vel.x = 0
-                self.hit_rect.centerx = self.pos.x
-        elif 'y' == dir:
-            hits = pg.sprite.spritecollide(self, self.game.walls,
-                                           False, Player._collide_hit_rect)
-            if hits:
-                if self.vel.y > 0:
-                    self.pos.y = hits[0].rect.top - self.hit_rect.height / 2
-                if self.vel.y < 0:
-                    self.pos.y = hits[0].rect.bottom + self.hit_rect.height / 2
-                self.vel.y = 0
-                self.hit_rect.centery = self.pos.y
 
 
 class Wall(pg.sprite.Sprite):
@@ -119,7 +114,11 @@ class Mob(pg.sprite.Sprite):
         self.image = self.game.spritesheet_characters.get_image(MOB_IMG)
         self.image_orig = self.image
         self.rect = self.image.get_rect()
+        self.hit_rect = MOB_HIT_RECT.copy()
+        self.hit_rect.center = self.rect.center
         self.pos = pg.Vector2(x, y) * TILESIZE
+        self.vel = pg.Vector2(0, 0)
+        self.acc = pg.Vector2(0, 0)
         self.rect.center = self.pos
         self.rot = 0
 
@@ -128,3 +127,13 @@ class Mob(pg.sprite.Sprite):
         self.image = pg.transform.rotate(self.image_orig, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+        self.acc = pg.Vector2(MOB_SPEED, 0).rotate(-self.rot)
+        self.acc += self.vel * -1
+        self.vel += self.acc * self.game.dt
+        self.pos += self.vel * self.game.dt \
+            + 0.5 * self.acc * self.game.dt ** 2
+        self.hit_rect.centerx = self.pos.x
+        collide_with_walls(self, self.game.walls, 'x')
+        self.hit_rect.centery = self.pos.y
+        collide_with_walls(self, self.game.walls, 'y')
+        self.rect.center = self.hit_rect.center
