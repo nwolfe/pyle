@@ -3,10 +3,10 @@ import sys
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
-from pyle.settings import BGCOLOR, LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE
+from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE
 from pyle.settings import WHITE, PLAYER_HEALTH
-from pyle.sprites import Player, Wall, Spritesheet, Mob, collide_hit_rect
-from pyle.tilemap import Map, Camera
+from pyle.sprites import Player, Spritesheet, Mob, collide_hit_rect
+from pyle.tilemap import TiledMap, Camera
 
 
 # Support running from single .exe (via PyInstaller)
@@ -16,6 +16,7 @@ if getattr(sys, 'frozen', False):
 RESOURCE_DIR = os.path.join(os.getcwd(), 'resources')
 IMG_DIR = os.path.join(RESOURCE_DIR, 'img')
 SND_DIR = os.path.join(RESOURCE_DIR, 'snd')
+MAP_DIR = os.path.join(RESOURCE_DIR, 'maps')
 
 
 # HUD functions
@@ -60,6 +61,7 @@ class Game:
         self.spritesheet_characters = None
         self.spritesheet_tiles = None
         self.map = None
+        self.map_img = None
         self.wall_img = None
         self.bullet_img = None
         self.load_data()
@@ -69,7 +71,10 @@ class Game:
             os.path.join(IMG_DIR, 'spritesheet_characters.png'))
         self.spritesheet_tiles = Spritesheet(
             os.path.join(IMG_DIR, 'spritesheet_tiles.png'))
-        self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
+        # self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
+        self.map = TiledMap(os.path.join(MAP_DIR, 'level1.tmx'))
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
         self.wall_img = pg.image.load(
             os.path.join(IMG_DIR, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
@@ -81,14 +86,15 @@ class Game:
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
-        for row, tiles in enumerate(self.map.data):
-            for col, tile in enumerate(tiles):
-                if tile == '1':
-                    Wall(self, col, row)
-                if tile == 'M':
-                    Mob(self, col, row)
-                if tile == 'P':
-                    self.player = Player(self, col, row)
+        # for row, tiles in enumerate(self.map.data):
+        #     for col, tile in enumerate(tiles):
+        #         if tile == '1':
+        #             Wall(self, col, row)
+        #         if tile == 'M':
+        #             Mob(self, col, row)
+        #         if tile == 'P':
+        #             self.player = Player(self, col, row)
+        self.player = Player(self, 5, 5)
         self.camera = Camera(self.map.width, self.map.height)
 
     def run(self):
@@ -126,8 +132,9 @@ class Game:
 
     def draw(self):
         pg.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
-        self.screen.fill(BGCOLOR)
+        # self.screen.fill(BGCOLOR)
         # self.draw_grid()
+        self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
         for sprite in self.all_sprites:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
