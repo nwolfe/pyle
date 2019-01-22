@@ -1,10 +1,11 @@
 import os
 import sys
 import pygame as pg
-from pyle.settings import TITLE, WIDTH, HEIGHT, FPS
-from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG
-from pyle.settings import BGCOLOR, LIGHTGREY
-from pyle.sprites import Player, Wall, Spritesheet, Mob
+from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
+from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
+from pyle.settings import BGCOLOR, LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE
+from pyle.settings import WHITE, PLAYER_HEALTH
+from pyle.sprites import Player, Wall, Spritesheet, Mob, collide_hit_rect
 from pyle.tilemap import Map, Camera
 
 
@@ -15,6 +16,25 @@ if getattr(sys, 'frozen', False):
 RESOURCE_DIR = os.path.join(os.getcwd(), 'resources')
 IMG_DIR = os.path.join(RESOURCE_DIR, 'img')
 SND_DIR = os.path.join(RESOURCE_DIR, 'snd')
+
+
+# HUD functions
+def draw_player_health(surf, x, y, pct):
+    if pct < 0:
+        pct = 0
+    BAR_LENGTH = 100
+    BAR_HEIGHT = 20
+    fill = pct * BAR_LENGTH
+    outline_rect = pg.Rect(x, y, BAR_LENGTH, BAR_HEIGHT)
+    fill_rect = pg.Rect(x, y, fill, BAR_HEIGHT)
+    if pct > 0.6:
+        color = GREEN
+    elif pct > 0.3:
+        color = YELLOW
+    else:
+        color = RED
+    pg.draw.rect(surf, color, fill_rect)
+    pg.draw.rect(surf, WHITE, outline_rect, 2)
 
 
 class Game:
@@ -86,17 +106,35 @@ class Game:
     def update(self):
         self.all_sprites.update()
         self.camera.update(self.player)
+        # mobs hit player
+        hits = pg.sprite.spritecollide(
+            self.player, self.mobs, False, collide_hit_rect)
+        for hit in hits:
+            self.player.health -= MOB_DAMAGE
+            hit.vel = pg.Vector2(0, 0)
+            if self.player.health <= 0:
+                self.playing = False
+        if hits:
+            self.player.pos += pg.Vector2(
+                MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
+
         # bullets hit mobs
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
         for hit in hits:
-            hit.kill()
+            hit.health -= BULLET_DAMAGE
+            hit.vel = pg.Vector2(0, 0)
 
     def draw(self):
         pg.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
         # self.draw_grid()
         for sprite in self.all_sprites:
+            if isinstance(sprite, Mob):
+                sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
+        # HUD functions
+        draw_player_health(self.screen, 10, 10,
+                           self.player.health / PLAYER_HEALTH)
         pg.display.flip()
 
     def draw_grid(self):

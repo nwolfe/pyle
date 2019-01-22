@@ -5,7 +5,8 @@ from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
 from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
 from pyle.settings import MOB_IMG, MOB_SPEED, MOB_HIT_RECT, BULLET_SPEED
 from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
-from pyle.settings import GUN_SPREAD
+from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
+from pyle.settings import PLAYER_HEALTH
 
 
 def collide_hit_rect(a, b):
@@ -16,18 +17,18 @@ def collide_with_walls(sprite, group, dir):
     if 'x' == dir:
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
-            if sprite.vel.x > 0:
+            if hits[0].rect.centerx > sprite.hit_rect.centerx:
                 sprite.pos.x = hits[0].rect.left - sprite.hit_rect.width / 2
-            if sprite.vel.x < 0:
+            if hits[0].rect.centerx < sprite.hit_rect.centerx:
                 sprite.pos.x = hits[0].rect.right + sprite.hit_rect.width / 2
             sprite.vel.x = 0
             sprite.hit_rect.centerx = sprite.pos.x
     elif 'y' == dir:
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
-            if sprite.vel.y > 0:
+            if hits[0].rect.centery > sprite.hit_rect.centery:
                 sprite.pos.y = hits[0].rect.top - sprite.hit_rect.height / 2
-            if sprite.vel.y < 0:
+            if hits[0].rect.centery < sprite.hit_rect.centery:
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2
             sprite.vel.y = 0
             sprite.hit_rect.centery = sprite.pos.y
@@ -71,6 +72,7 @@ class Player(pg.sprite.Sprite):
         self.rot = 0
         self.rot_speed = 0
         self.last_shot = 0
+        self.health = PLAYER_HEALTH
 
     def update(self):
         self._handle_keys()
@@ -133,6 +135,8 @@ class Mob(pg.sprite.Sprite):
         self.acc = pg.Vector2(0, 0)
         self.rect.center = self.pos
         self.rot = 0
+        self.health = MOB_HEALTH
+        self.health_bar = None
 
     def update(self):
         self.rot = (self.game.player.pos - self.pos).angle_to(pg.Vector2(1, 0))
@@ -149,6 +153,21 @@ class Mob(pg.sprite.Sprite):
         self.hit_rect.centery = self.pos.y
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
+        if self.health <= 0:
+            self.kill()
+
+    def draw_health(self):
+        if self.health >= MOB_HEALTH:
+            return
+        if self.health > 60:
+            color = GREEN
+        elif self.health > 30:
+            color = YELLOW
+        else:
+            color = RED
+        width = int(self.rect.width * self.health / MOB_HEALTH)
+        self.health_bar = pg.Rect(0, 0, width, 7)
+        pg.draw.rect(self.image, color, self.health_bar)
 
 
 class Bullet(pg.sprite.Sprite):
