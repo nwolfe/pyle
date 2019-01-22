@@ -2,7 +2,7 @@ import os
 import sys
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS
-from pyle.settings import TILESIZE, WALL_IMG
+from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG
 from pyle.settings import BGCOLOR, LIGHTGREY
 from pyle.sprites import Player, Wall, Spritesheet, Mob
 from pyle.tilemap import Map, Camera
@@ -33,6 +33,7 @@ class Game:
         self.player = None
         self.walls = None
         self.mobs = None
+        self.bullets = None
         self.camera = None
 
         # Resources from disk
@@ -40,6 +41,7 @@ class Game:
         self.spritesheet_tiles = None
         self.map = None
         self.wall_img = None
+        self.bullet_img = None
         self.load_data()
 
     def load_data(self):
@@ -51,10 +53,13 @@ class Game:
         self.wall_img = pg.image.load(
             os.path.join(IMG_DIR, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
+        self.bullet_img = pg.image.load(
+            os.path.join(IMG_DIR, BULLET_IMG)).convert_alpha()
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
         self.walls = pg.sprite.Group()
+        self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
@@ -81,6 +86,10 @@ class Game:
     def update(self):
         self.all_sprites.update()
         self.camera.update(self.player)
+        # bullets hit mobs
+        hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
+        for hit in hits:
+            hit.kill()
 
     def draw(self):
         pg.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
