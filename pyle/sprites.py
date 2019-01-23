@@ -8,7 +8,7 @@ from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
 from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
 from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
 from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
-from pyle.settings import LAYER_EFFECTS
+from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS
 
 
 def collide_hit_rect(a, b):
@@ -90,6 +90,11 @@ class Player(pg.sprite.Sprite):
         self.hit_rect.centery = self.pos.y
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
+
+    def add_health(self, amount):
+        self.health += amount
+        if self.health > PLAYER_HEALTH:
+            self.health = PLAYER_HEALTH
 
     def _handle_keys(self):
         self.rot_speed = 0
@@ -241,3 +246,14 @@ class MuzzleFlash(pg.sprite.Sprite):
     def update(self):
         if pg.time.get_ticks() - self.spawn_time > FLASH_DURATION:
             self.kill()
+
+
+class Item(pg.sprite.Sprite):
+    def __init__(self, game, pos, type):
+        self._layer = LAYER_ITEMS
+        pg.sprite.Sprite.__init__(self, game.all_sprites, game.items)
+        self.game = game
+        self.image = self.game.item_images[type]
+        self.rect = self.image.get_rect()
+        self.type = type
+        self.rect.center = pos

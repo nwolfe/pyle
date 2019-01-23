@@ -59,7 +59,14 @@ MUZZLE_FLASHES = [
 
 # Layers
 LAYER_WALL = 1
+LAYER_ITEMS = 1
 LAYER_PLAYER = 2
 LAYER_BULLET = 3
 LAYER_MOB = 2
 LAYER_EFFECTS = 4
+
+# Items
+ITEM_IMAGES = {
+    'health': 'health_pack.png'
+}
+HEALTH_PACK_AMOUNT = 20

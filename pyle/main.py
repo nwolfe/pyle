@@ -4,8 +4,10 @@ import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
 from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
-from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES
+from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
+from pyle.settings import HEALTH_PACK_AMOUNT
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
+from pyle.sprites import Item
 from pyle.tilemap import TiledMap, Camera
 
 
@@ -56,6 +58,7 @@ class Game:
         self.mobs = None
         self.bullets = None
         self.camera = None
+        self.items = None
         self.draw_debug = None
 
         # Resources from disk
@@ -66,6 +69,7 @@ class Game:
         self.wall_img = None
         self.bullet_img = None
         self.gun_flashes = None
+        self.item_images = None
         self.load_data()
 
     def load_data(self):
@@ -86,12 +90,17 @@ class Game:
         for file in MUZZLE_FLASHES:
             self.gun_flashes.append(
                 pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha())
+        self.item_images = {}
+        for item in ITEM_IMAGES:
+            self.item_images[item] = pg.image.load(
+                os.path.join(IMG_DIR, ITEM_IMAGES[item])).convert_alpha()
 
     def new(self):
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.items = pg.sprite.Group()
         # for row, tiles in enumerate(self.map.data):
         #     for col, tile in enumerate(tiles):
         #         if tile == '1':
@@ -101,13 +110,17 @@ class Game:
         #         if tile == 'P':
         #             self.player = Player(self, col, row)
         for tile_object in self.map.tm.objects:
+            obj_center = pg.Vector2(tile_object.x + tile_object.width / 2,
+                                    tile_object.y + tile_object.height / 2)
             if tile_object.name == 'player':
-                self.player = Player(self, tile_object.x, tile_object.y)
+                self.player = Player(self, obj_center.x, obj_center.y)
             elif tile_object.name == 'wall':
                 Obstacle(self, tile_object.x, tile_object.y,
                          tile_object.width, tile_object.height)
             elif tile_object.name == 'zombie':
-                Mob(self, tile_object.x, tile_object.y)
+                Mob(self, obj_center.x, obj_center.y)
+            elif tile_object.name in ITEM_IMAGES.keys():
+                Item(self, obj_center, tile_object.name)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
 
@@ -126,6 +139,13 @@ class Game:
     def update(self):
         self.all_sprites.update()
         self.camera.update(self.player)
+        # player hits items
+        hits = pg.sprite.spritecollide(self.player, self.items, False)
+        for hit in hits:
+            if hit.type == 'health' and self.player.health < PLAYER_HEALTH:
+                self.player.add_health(HEALTH_PACK_AMOUNT)
+                hit.kill()
+
         # mobs hit player
         hits = pg.sprite.spritecollide(
             self.player, self.mobs, False, collide_hit_rect)

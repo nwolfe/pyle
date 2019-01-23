@@ -35,7 +35,6 @@
         },
         {
             "label": "execute",
-            "dependsOn": ["build"],
             "type": "process",
             "command": "${workspaceFolder}/dist/${workspaceFolderBasename}.exe",
             "group": "build",
