@@ -3,9 +3,9 @@ import sys
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
-from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE
+from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
 from pyle.settings import WHITE, PLAYER_HEALTH
-from pyle.sprites import Player, Spritesheet, Mob, collide_hit_rect
+from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
 from pyle.tilemap import TiledMap, Camera
 
 
@@ -56,6 +56,7 @@ class Game:
         self.mobs = None
         self.bullets = None
         self.camera = None
+        self.draw_debug = None
 
         # Resources from disk
         self.spritesheet_characters = None
@@ -94,8 +95,16 @@ class Game:
         #             Mob(self, col, row)
         #         if tile == 'P':
         #             self.player = Player(self, col, row)
-        self.player = Player(self, 5, 5)
+        for tile_object in self.map.tm.objects:
+            if tile_object.name == 'player':
+                self.player = Player(self, tile_object.x, tile_object.y)
+            elif tile_object.name == 'wall':
+                Obstacle(self, tile_object.x, tile_object.y,
+                         tile_object.width, tile_object.height)
+            elif tile_object.name == 'zombie':
+                Mob(self, tile_object.x, tile_object.y)
         self.camera = Camera(self.map.width, self.map.height)
+        self.draw_debug = False
 
     def run(self):
         self.playing = True
@@ -139,6 +148,13 @@ class Game:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
+            if self.draw_debug:
+                pg.draw.rect(self.screen, CYAN,
+                             self.camera.apply_rect(sprite.hit_rect), 1)
+        if self.draw_debug:
+            for wall in self.walls:
+                pg.draw.rect(self.screen, CYAN,
+                             self.camera.apply_rect(wall.rect), 1)
         # HUD functions
         draw_player_health(self.screen, 10, 10,
                            self.player.health / PLAYER_HEALTH)
@@ -157,6 +173,8 @@ class Game:
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit()
+                if event.key == pg.K_h:
+                    self.draw_debug = not self.draw_debug
 
     def show_start_screen(self):
         pass
