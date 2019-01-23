@@ -3,10 +3,10 @@ import pygame as pg
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
 from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
-from pyle.settings import MOB_IMG, MOB_SPEED, MOB_HIT_RECT, BULLET_SPEED
+from pyle.settings import MOB_IMG, MOB_SPEEDS, MOB_HIT_RECT, BULLET_SPEED
 from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
 from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
-from pyle.settings import PLAYER_HEALTH
+from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS
 
 
 def collide_hit_rect(a, b):
@@ -148,13 +148,16 @@ class Mob(pg.sprite.Sprite):
         self.rot = 0
         self.health = MOB_HEALTH
         self.health_bar = None
+        self.speed = random.choice(MOB_SPEEDS)
 
     def update(self):
         self.rot = (self.game.player.pos - self.pos).angle_to(pg.Vector2(1, 0))
         self.image = pg.transform.rotate(self.image_orig, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
-        self.acc = pg.Vector2(MOB_SPEED, 0).rotate(-self.rot)
+        self.acc = pg.Vector2(1, 0).rotate(-self.rot)
+        self.avoid_mobs()
+        self.acc.scale_to_length(self.speed)
         self.acc += self.vel * -1
         self.vel += self.acc * self.game.dt
         self.pos += self.vel * self.game.dt \
@@ -166,6 +169,13 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.hit_rect.center
         if self.health <= 0:
             self.kill()
+
+    def avoid_mobs(self):
+        for mob in self.game.mobs:
+            if mob != self:
+                dist = self.pos - mob.pos
+                if 0 < dist.length() < AVOID_RADIUS:
+                    self.acc += dist.normalize()
 
     def draw_health(self):
         if self.health >= MOB_HEALTH:
