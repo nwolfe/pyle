@@ -4,7 +4,7 @@ import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
 from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
-from pyle.settings import WHITE, PLAYER_HEALTH
+from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
 from pyle.tilemap import TiledMap, Camera
 
@@ -65,6 +65,7 @@ class Game:
         self.map_img = None
         self.wall_img = None
         self.bullet_img = None
+        self.gun_flashes = None
         self.load_data()
 
     def load_data(self):
@@ -81,9 +82,13 @@ class Game:
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
         self.bullet_img = pg.image.load(
             os.path.join(IMG_DIR, BULLET_IMG)).convert_alpha()
+        self.gun_flashes = []
+        for file in MUZZLE_FLASHES:
+            self.gun_flashes.append(
+                pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha())
 
     def new(self):
-        self.all_sprites = pg.sprite.Group()
+        self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()

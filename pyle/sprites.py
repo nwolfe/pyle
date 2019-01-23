@@ -6,7 +6,9 @@ from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
 from pyle.settings import MOB_IMG, MOB_SPEEDS, MOB_HIT_RECT, BULLET_SPEED
 from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
 from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
-from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS
+from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
+from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
+from pyle.settings import LAYER_EFFECTS
 
 
 def collide_hit_rect(a, b):
@@ -60,11 +62,13 @@ class Spritesheet:
 
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
+        self._layer = LAYER_PLAYER
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
         self.image = self.game.spritesheet_characters.get_image(PLAYER_IMG)
         self.image_orig = self.image
         self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
         self.hit_rect = PLAYER_HIT_RECT
         self.hit_rect.center = self.rect.center
         self.vel = pg.Vector2(0, 0)
@@ -100,17 +104,22 @@ class Player(pg.sprite.Sprite):
         if keys[pg.K_DOWN] or keys[pg.K_s]:
             self.vel = pg.Vector2(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
         if keys[pg.K_SPACE]:
-            now = pg.time.get_ticks()
-            if now - self.last_shot > BULLET_RATE:
-                self.last_shot = now
-                pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
-                dir = pg.Vector2(1, 0).rotate(-self.rot)
-                Bullet(self.game, pos, dir)
-                self.vel = pg.Vector2(-KICKBACK, 0).rotate(-self.rot)
+            self._shoot()
+
+    def _shoot(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > BULLET_RATE:
+            self.last_shot = now
+            pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
+            dir = pg.Vector2(1, 0).rotate(-self.rot)
+            Bullet(self.game, pos, dir)
+            self.vel = pg.Vector2(-KICKBACK, 0).rotate(-self.rot)
+            MuzzleFlash(self.game, pos)
 
 
 class Wall(pg.sprite.Sprite):
     def __init__(self, game, x, y):
+        self._layer = LAYER_WALL
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.walls)
         self.game = game
         self.image = self.game.wall_img
@@ -134,11 +143,13 @@ class Obstacle(pg.sprite.Sprite):
 
 class Mob(pg.sprite.Sprite):
     def __init__(self, game, x, y):
+        self._layer = LAYER_MOB
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.mobs)
         self.game = game
         self.image = self.game.spritesheet_characters.get_image(MOB_IMG)
         self.image_orig = self.image
         self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
         self.hit_rect = MOB_HIT_RECT.copy()
         self.hit_rect.center = self.rect.center
         self.pos = pg.Vector2(x, y)
@@ -193,6 +204,7 @@ class Mob(pg.sprite.Sprite):
 
 class Bullet(pg.sprite.Sprite):
     def __init__(self, game, pos, dir):
+        self._layer = LAYER_BULLET
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.bullets)
         self.game = game
         self.image = self.game.bullet_img
@@ -210,4 +222,22 @@ class Bullet(pg.sprite.Sprite):
         if pg.sprite.spritecollideany(self, self.game.walls):
             self.kill()
         if pg.time.get_ticks() - self.spawn_time > BULLET_LIFETIME:
+            self.kill()
+
+
+class MuzzleFlash(pg.sprite.Sprite):
+    def __init__(self, game, pos):
+        self._layer = LAYER_EFFECTS
+        pg.sprite.Sprite.__init__(self, game.all_sprites)
+        self.game = game
+        size = random.randint(20, 50)
+        image = random.choice(self.game.gun_flashes)
+        self.image = pg.transform.scale(image, (size, size))
+        self.rect = self.image.get_rect()
+        self.pos = pos
+        self.rect.center = pos
+        self.spawn_time = pg.time.get_ticks()
+
+    def update(self):
+        if pg.time.get_ticks() - self.spawn_time > FLASH_DURATION:
             self.kill()
