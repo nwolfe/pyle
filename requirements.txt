@@ -1,2 +1,3 @@
 pygame>=1.9.4
 pytmx>=3.21.6
+pytweening>=1.0.3

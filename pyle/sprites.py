@@ -1,5 +1,6 @@
 import random
 import pygame as pg
+import pytweening as tween
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
 from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
@@ -8,7 +9,7 @@ from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
 from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
 from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
 from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
-from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS
+from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS, BOB_RANGE, BOB_SPEED
 
 
 def collide_hit_rect(a, b):
@@ -256,4 +257,17 @@ class Item(pg.sprite.Sprite):
         self.image = self.game.item_images[type]
         self.rect = self.image.get_rect()
         self.type = type
+        self.pos = pos
         self.rect.center = pos
+        self.tween = tween.easeInOutSine
+        self.step = 0
+        self.dir = 1
+
+    def update(self):
+        # bobbing motion
+        offset = BOB_RANGE * (self.tween(self.step / BOB_RANGE) - 0.5)
+        self.rect.centery = self.pos.y + offset * self.dir
+        self.step += BOB_SPEED
+        if self.step > BOB_RANGE:
+            self.step = 0
+            self.dir *= -1
