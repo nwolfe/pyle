@@ -1,11 +1,15 @@
 import os
 import sys
+import random
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
 from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
 from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
-from pyle.settings import HEALTH_PACK_AMOUNT
+from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG
+from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS_GUN
+from pyle.settings import ZOMBIE_MOAN_SOUNDS, ZOMBIE_DEATH_SOUNDS
+from pyle.settings import PLAYER_HIT_SOUNDS, PLAYER_HIT_SOUND_CHANCE
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
 from pyle.sprites import Item
 from pyle.tilemap import TiledMap, Camera
@@ -18,7 +22,34 @@ if getattr(sys, 'frozen', False):
 RESOURCE_DIR = os.path.join(os.getcwd(), 'resources')
 IMG_DIR = os.path.join(RESOURCE_DIR, 'img')
 SND_DIR = os.path.join(RESOURCE_DIR, 'snd')
+MUSIC_DIR = os.path.join(RESOURCE_DIR, 'music')
 MAP_DIR = os.path.join(RESOURCE_DIR, 'maps')
+
+
+def load_image(file):
+    return pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha()
+
+
+def load_sound(file_and_volume):
+    volume = 1.0
+    if type(file_and_volume) is list:
+        file, volume = file_and_volume
+    else:
+        file = file_and_volume
+
+    # class DebugSound(pg.mixer.Sound):
+    #     def __init__(self, name):
+    #         pg.mixer.Sound.__init__(self, name)
+    #         self.name = name
+
+    #     def play(self):
+    #         pg.mixer.Sound.play(self)
+    #         print("%s [%s]" % (self.name, self.get_volume()))
+    # sound = DebugSound(os.path.join(SND_DIR, file))
+
+    sound = pg.mixer.Sound(os.path.join(SND_DIR, file))
+    sound.set_volume(volume)
+    return sound
 
 
 # HUD functions
@@ -63,37 +94,58 @@ class Game:
 
         # Resources from disk
         self.spritesheet_characters = None
-        self.spritesheet_tiles = None
+        # self.spritesheet_tiles = None
         self.map = None
         self.map_img = None
+        self.player_img = None
+        self.mob_img = None
         self.wall_img = None
         self.bullet_img = None
         self.gun_flashes = None
         self.item_images = None
+        self.effect_sounds = None
+        self.weapon_sounds = None
+        self.zombie_moan_sounds = None
+        self.zombie_death_sounds = None
+        self.player_hit_sounds = None
         self.load_data()
 
     def load_data(self):
+        # Images and maps
         self.spritesheet_characters = Spritesheet(
             os.path.join(IMG_DIR, 'spritesheet_characters.png'))
-        self.spritesheet_tiles = Spritesheet(
-            os.path.join(IMG_DIR, 'spritesheet_tiles.png'))
-        # self.map = Map(os.path.join(RESOURCE_DIR, 'map2.txt'))
         self.map = TiledMap(os.path.join(MAP_DIR, 'level1.tmx'))
         self.map_img = self.map.make_map()
         self.map_rect = self.map_img.get_rect()
-        self.wall_img = pg.image.load(
-            os.path.join(IMG_DIR, WALL_IMG)).convert_alpha()
+        self.player_img = self.spritesheet_characters.get_image(PLAYER_IMG)
+        self.mob_img = self.spritesheet_characters.get_image(MOB_IMG)
+        self.wall_img = load_image(WALL_IMG)
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
-        self.bullet_img = pg.image.load(
-            os.path.join(IMG_DIR, BULLET_IMG)).convert_alpha()
+        self.bullet_img = load_image(BULLET_IMG)
         self.gun_flashes = []
-        for file in MUZZLE_FLASHES:
-            self.gun_flashes.append(
-                pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha())
+        for i in MUZZLE_FLASHES:
+            self.gun_flashes.append(load_image(i))
         self.item_images = {}
-        for item in ITEM_IMAGES:
-            self.item_images[item] = pg.image.load(
-                os.path.join(IMG_DIR, ITEM_IMAGES[item])).convert_alpha()
+        for i in ITEM_IMAGES:
+            self.item_images[i] = load_image(ITEM_IMAGES[i])
+
+        # Sounds and music
+        pg.mixer_music.load(os.path.join(MUSIC_DIR, BG_MUSIC))
+        self.effect_sounds = {}
+        for s in EFFECTS_SOUNDS:
+            self.effect_sounds[s] = load_sound(EFFECTS_SOUNDS[s])
+        self.weapon_sounds = {'gun': []}
+        for s in WEAPON_SOUNDS_GUN:
+            self.weapon_sounds['gun'].append(load_sound(s))
+        self.zombie_moan_sounds = []
+        for s in ZOMBIE_MOAN_SOUNDS:
+            self.zombie_moan_sounds.append(load_sound(s))
+        self.zombie_death_sounds = []
+        for s in ZOMBIE_DEATH_SOUNDS:
+            self.zombie_death_sounds.append(load_sound(s))
+        self.player_hit_sounds = []
+        for s in PLAYER_HIT_SOUNDS:
+            self.player_hit_sounds.append(load_sound(s))
 
     def new(self):
         self.all_sprites = pg.sprite.LayeredUpdates()
@@ -123,9 +175,11 @@ class Game:
                 Item(self, obj_center, tile_object.name)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
+        self.effect_sounds['level_start'].play()
 
     def run(self):
         self.playing = True
+        pg.mixer_music.play(loops=-1)
         while self.playing:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
@@ -143,6 +197,7 @@ class Game:
         hits = pg.sprite.spritecollide(self.player, self.items, False)
         for hit in hits:
             if hit.type == 'health' and self.player.health < PLAYER_HEALTH:
+                self.effect_sounds['health_up'].play()
                 self.player.add_health(HEALTH_PACK_AMOUNT)
                 hit.kill()
 
@@ -150,6 +205,8 @@ class Game:
         hits = pg.sprite.spritecollide(
             self.player, self.mobs, False, collide_hit_rect)
         for hit in hits:
+            if random.random() < PLAYER_HIT_SOUND_CHANCE:
+                random.choice(self.player_hit_sounds).play()
             self.player.health -= MOB_DAMAGE
             hit.vel = pg.Vector2(0, 0)
             if self.player.health <= 0:
@@ -174,8 +231,9 @@ class Game:
                 sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
             if self.draw_debug:
-                pg.draw.rect(self.screen, CYAN,
-                             self.camera.apply_rect(sprite.hit_rect), 1)
+                if hasattr(sprite, 'hit_rect'):
+                    pg.draw.rect(self.screen, CYAN,
+                                 self.camera.apply_rect(sprite.hit_rect), 1)
         if self.draw_debug:
             for wall in self.walls:
                 pg.draw.rect(self.screen, CYAN,

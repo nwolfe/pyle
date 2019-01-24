@@ -47,6 +47,7 @@ MOB_HEALTH = 100
 MOB_DAMAGE = 10
 MOB_KNOCKBACK = 20
 AVOID_RADIUS = 50
+DETECT_RADIUS = 400
 
 # Effects
 FLASH_DURATION = 40
@@ -72,3 +73,34 @@ ITEM_IMAGES = {
 HEALTH_PACK_AMOUNT = 20
 BOB_RANGE = 15
 BOB_SPEED = 0.4
+
+# Sounds
+BG_MUSIC = 'espionage.ogg'
+PLAYER_HIT_SOUND_CHANCE = 0.7
+PLAYER_HIT_SOUNDS = [
+    'pain/8.wav',
+    'pain/9.wav',
+    'pain/10.wav',
+    'pain/11.wav'
+]
+ZOMBIE_MOAN_CHANCE = 0.005
+ZOMBIE_MOAN_SOUNDS = [
+    ['brains2.wav', 0.8],
+    ['brains3.wav', 0.8],
+    ['zombie-roar-1.wav', 0.2],
+    ['zombie-roar-2.wav', 0.2],
+    ['zombie-roar-3.wav', 0.2],
+    ['zombie-roar-5.wav', 0.2],
+    ['zombie-roar-6.wav', 0.2],
+    ['zombie-roar-7.wav', 0.2]
+]
+ZOMBIE_DEATH_SOUNDS = [
+    ['splat-15.wav', 0.3]
+]
+WEAPON_SOUNDS_GUN = [
+    ['sfx_weapon_singleshot2.wav', 0.4]
+]
+EFFECTS_SOUNDS = {
+    'level_start': ['level_start.wav', 0.15],
+    'health_up': 'health_pack.wav'
+}

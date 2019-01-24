@@ -2,14 +2,15 @@ import random
 import pygame as pg
 import pytweening as tween
 import xml.etree.ElementTree as xml
-from pyle.settings import PLAYER_SPEED, PLAYER_IMG, PLAYER_ROTATION_SPEED
+from pyle.settings import PLAYER_SPEED, PLAYER_ROTATION_SPEED
 from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
-from pyle.settings import MOB_IMG, MOB_SPEEDS, MOB_HIT_RECT, BULLET_SPEED
+from pyle.settings import MOB_SPEEDS, MOB_HIT_RECT, BULLET_SPEED
 from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
 from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
 from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
 from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
 from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS, BOB_RANGE, BOB_SPEED
+from pyle.settings import DETECT_RADIUS, ZOMBIE_MOAN_CHANCE
 
 
 def collide_hit_rect(a, b):
@@ -66,7 +67,7 @@ class Player(pg.sprite.Sprite):
         self._layer = LAYER_PLAYER
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
-        self.image = self.game.spritesheet_characters.get_image(PLAYER_IMG)
+        self.image = self.game.player_img
         self.image_orig = self.image
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -120,6 +121,7 @@ class Player(pg.sprite.Sprite):
             dir = pg.Vector2(1, 0).rotate(-self.rot)
             Bullet(self.game, pos, dir)
             self.vel = pg.Vector2(-KICKBACK, 0).rotate(-self.rot)
+            random.choice(self.game.weapon_sounds['gun']).play()
             MuzzleFlash(self.game, pos)
 
 
@@ -152,7 +154,7 @@ class Mob(pg.sprite.Sprite):
         self._layer = LAYER_MOB
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.mobs)
         self.game = game
-        self.image = self.game.spritesheet_characters.get_image(MOB_IMG)
+        self.image = self.game.mob_img.copy()
         self.image_orig = self.image
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -166,25 +168,31 @@ class Mob(pg.sprite.Sprite):
         self.health = MOB_HEALTH
         self.health_bar = None
         self.speed = random.choice(MOB_SPEEDS)
+        self.target = self.game.player
 
     def update(self):
-        self.rot = (self.game.player.pos - self.pos).angle_to(pg.Vector2(1, 0))
-        self.image = pg.transform.rotate(self.image_orig, self.rot)
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos
-        self.acc = pg.Vector2(1, 0).rotate(-self.rot)
-        self.avoid_mobs()
-        self.acc.scale_to_length(self.speed)
-        self.acc += self.vel * -1
-        self.vel += self.acc * self.game.dt
-        self.pos += self.vel * self.game.dt \
-            + 0.5 * self.acc * self.game.dt ** 2
-        self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.walls, 'x')
-        self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.walls, 'y')
-        self.rect.center = self.hit_rect.center
+        target_dist = self.target.pos - self.pos
+        if target_dist.length_squared() < DETECT_RADIUS**2:
+            if random.random() < ZOMBIE_MOAN_CHANCE:
+                random.choice(self.game.zombie_moan_sounds).play()
+            self.rot = target_dist.angle_to(pg.Vector2(1, 0))
+            self.image = pg.transform.rotate(self.image_orig, self.rot)
+            self.rect = self.image.get_rect()
+            self.rect.center = self.pos
+            self.acc = pg.Vector2(1, 0).rotate(-self.rot)
+            self.avoid_mobs()
+            self.acc.scale_to_length(self.speed)
+            self.acc += self.vel * -1
+            self.vel += self.acc * self.game.dt
+            self.pos += self.vel * self.game.dt \
+                + 0.5 * self.acc * self.game.dt ** 2
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.rect.center = self.hit_rect.center
         if self.health <= 0:
+            random.choice(self.game.zombie_death_sounds).play()
             self.kill()
 
     def avoid_mobs(self):
@@ -256,6 +264,7 @@ class Item(pg.sprite.Sprite):
         self.game = game
         self.image = self.game.item_images[type]
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         self.type = type
         self.pos = pos
         self.rect.center = pos
