@@ -8,7 +8,7 @@ from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
 from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
 from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG
 from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS_GUN
-from pyle.settings import ZOMBIE_MOAN_SOUNDS, ZOMBIE_DEATH_SOUNDS
+from pyle.settings import ZOMBIE_MOAN_SOUNDS, ZOMBIE_DEATH_SOUNDS, SPLAT_IMG
 from pyle.settings import PLAYER_HIT_SOUNDS, PLAYER_HIT_SOUND_CHANCE
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
 from pyle.sprites import Item
@@ -26,8 +26,12 @@ MUSIC_DIR = os.path.join(RESOURCE_DIR, 'music')
 MAP_DIR = os.path.join(RESOURCE_DIR, 'maps')
 
 
-def load_image(file):
-    return pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha()
+def load_image(file, scale=None):
+    i = pg.image.load(os.path.join(IMG_DIR, file)).convert_alpha()
+    if scale:
+        return pg.transform.scale(i, scale)
+    else:
+        return i
 
 
 def load_sound(file_and_volume):
@@ -94,13 +98,13 @@ class Game:
 
         # Resources from disk
         self.spritesheet_characters = None
-        # self.spritesheet_tiles = None
         self.map = None
         self.map_img = None
         self.player_img = None
         self.mob_img = None
         self.wall_img = None
         self.bullet_img = None
+        self.splat_img = None
         self.gun_flashes = None
         self.item_images = None
         self.effect_sounds = None
@@ -119,9 +123,9 @@ class Game:
         self.map_rect = self.map_img.get_rect()
         self.player_img = self.spritesheet_characters.get_image(PLAYER_IMG)
         self.mob_img = self.spritesheet_characters.get_image(MOB_IMG)
-        self.wall_img = load_image(WALL_IMG)
-        self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
+        self.wall_img = load_image(WALL_IMG, scale=(TILESIZE, TILESIZE))
         self.bullet_img = load_image(BULLET_IMG)
+        self.splat_img = load_image(SPLAT_IMG, scale=(64, 64))
         self.gun_flashes = []
         for i in MUZZLE_FLASHES:
             self.gun_flashes.append(load_image(i))

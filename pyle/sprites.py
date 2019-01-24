@@ -194,6 +194,8 @@ class Mob(pg.sprite.Sprite):
         if self.health <= 0:
             random.choice(self.game.zombie_death_sounds).play()
             self.kill()
+            self.game.map_img.blit(self.game.splat_img,
+                                   self.pos - pg.Vector2(32, 32))
 
     def avoid_mobs(self):
         for mob in self.game.mobs:
