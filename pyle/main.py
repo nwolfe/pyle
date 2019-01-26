@@ -95,8 +95,11 @@ class Game:
         self.camera = None
         self.items = None
         self.draw_debug = None
+        self.paused = None
 
         # Resources from disk
+        self.title_font = None
+        self.dim_screen = None
         self.spritesheet_characters = None
         self.map = None
         self.map_img = None
@@ -116,6 +119,9 @@ class Game:
 
     def load_data(self):
         # Images and maps
+        self.title_font = os.path.join(IMG_DIR, 'ZOMBIE.TTF')
+        self.dim_screen = pg.Surface(self.screen.get_size()).convert_alpha()
+        self.dim_screen.fill((0, 0, 0, 180))
         self.spritesheet_characters = Spritesheet(
             os.path.join(IMG_DIR, 'spritesheet_characters.png'))
         self.map = TiledMap(os.path.join(MAP_DIR, 'level1.tmx'))
@@ -179,6 +185,7 @@ class Game:
                 Item(self, obj_center, tile_object.name)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
+        self.paused = False
         self.effect_sounds['level_start'].play()
 
     def run(self):
@@ -187,7 +194,8 @@ class Game:
         while self.playing:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
-            self.update()
+            if not self.paused:
+                self.update()
             self.draw()
 
     def quit(self):
@@ -245,6 +253,10 @@ class Game:
         # HUD functions
         draw_player_health(self.screen, 10, 10,
                            self.player.health / PLAYER_HEALTH)
+        if self.paused:
+            self.screen.blit(self.dim_screen, (0, 0))
+            self._draw_text("Paused", self.title_font, 105, RED,
+                            WIDTH / 2, HEIGHT / 2, align="center")
         pg.display.flip()
 
     def draw_grid(self):
@@ -252,6 +264,30 @@ class Game:
             pg.draw.line(self.screen, LIGHTGREY, (x, 0), (x, HEIGHT))
         for y in range(0, HEIGHT, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (0, y), (WIDTH, y))
+
+    def _draw_text(self, text, font_name, size, color, x, y, align="nw"):
+        font = pg.font.Font(font_name, size)
+        text_surface = font.render(text, True, color)
+        text_rect = text_surface.get_rect()
+        if align == "nw":
+            text_rect.topleft = (x, y)
+        if align == "ne":
+            text_rect.topright = (x, y)
+        if align == "sw":
+            text_rect.bottomleft = (x, y)
+        if align == "se":
+            text_rect.bottomright = (x, y)
+        if align == "n":
+            text_rect.midtop = (x, y)
+        if align == "s":
+            text_rect.midbottom = (x, y)
+        if align == "e":
+            text_rect.midright = (x, y)
+        if align == "w":
+            text_rect.midleft = (x, y)
+        if align == "center":
+            text_rect.center = (x, y)
+        self.screen.blit(text_surface, text_rect)
 
     def events(self):
         for event in pg.event.get():
@@ -262,6 +298,8 @@ class Game:
                     self.quit()
                 if event.key == pg.K_h:
                     self.draw_debug = not self.draw_debug
+                if event.key == pg.K_p:
+                    self.paused = not self.paused
 
     def show_start_screen(self):
         pass

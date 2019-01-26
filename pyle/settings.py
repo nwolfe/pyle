@@ -99,7 +99,7 @@ ZOMBIE_DEATH_SOUNDS = [
     ['splat-15.wav', 0.3]
 ]
 WEAPON_SOUNDS_GUN = [
-    ['sfx_weapon_singleshot2.wav', 0.4]
+    ['pistol.wav', 0.2]
 ]
 EFFECTS_SOUNDS = {
     'level_start': ['level_start.wav', 0.15],
