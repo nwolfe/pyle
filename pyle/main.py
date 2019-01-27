@@ -4,10 +4,10 @@ import random
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
-from pyle.settings import LIGHTGREY, BULLET_DAMAGE, MOB_DAMAGE, CYAN
+from pyle.settings import LIGHTGREY, MOB_DAMAGE, CYAN, WEAPONS
 from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
 from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG
-from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS_GUN
+from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS
 from pyle.settings import ZOMBIE_MOAN_SOUNDS, ZOMBIE_DEATH_SOUNDS, SPLAT_IMG
 from pyle.settings import PLAYER_HIT_SOUNDS, PLAYER_HIT_SOUND_CHANCE
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
@@ -77,6 +77,7 @@ def draw_player_health(surf, x, y, pct):
 
 class Game:
     def __init__(self):
+        pg.mixer.pre_init(44100, -16, 1, 2048)
         pg.init()
         pg.mixer.init()
         pg.display.set_caption(TITLE)
@@ -106,7 +107,7 @@ class Game:
         self.player_img = None
         self.mob_img = None
         self.wall_img = None
-        self.bullet_img = None
+        self.bullet_images = None
         self.splat_img = None
         self.gun_flashes = None
         self.item_images = None
@@ -130,7 +131,10 @@ class Game:
         self.player_img = self.spritesheet_characters.get_image(PLAYER_IMG)
         self.mob_img = self.spritesheet_characters.get_image(MOB_IMG)
         self.wall_img = load_image(WALL_IMG, scale=(TILESIZE, TILESIZE))
-        self.bullet_img = load_image(BULLET_IMG)
+        self.bullet_images = dict(
+            large=load_image(BULLET_IMG),
+            small=load_image(BULLET_IMG, scale=(10, 10))
+        )
         self.splat_img = load_image(SPLAT_IMG, scale=(64, 64))
         self.gun_flashes = []
         for i in MUZZLE_FLASHES:
@@ -144,9 +148,6 @@ class Game:
         self.effect_sounds = {}
         for s in EFFECTS_SOUNDS:
             self.effect_sounds[s] = load_sound(EFFECTS_SOUNDS[s])
-        self.weapon_sounds = {'gun': []}
-        for s in WEAPON_SOUNDS_GUN:
-            self.weapon_sounds['gun'].append(load_sound(s))
         self.zombie_moan_sounds = []
         for s in ZOMBIE_MOAN_SOUNDS:
             self.zombie_moan_sounds.append(load_sound(s))
@@ -156,6 +157,11 @@ class Game:
         self.player_hit_sounds = []
         for s in PLAYER_HIT_SOUNDS:
             self.player_hit_sounds.append(load_sound(s))
+        self.weapon_sounds = {}
+        for w in WEAPON_SOUNDS:
+            self.weapon_sounds[w] = []
+            for s in WEAPON_SOUNDS[w]:
+                self.weapon_sounds[w].append(load_sound(s))
 
     def new(self):
         self.all_sprites = pg.sprite.LayeredUpdates()
@@ -230,7 +236,8 @@ class Game:
         # bullets hit mobs
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
         for hit in hits:
-            hit.health -= BULLET_DAMAGE
+            damage = WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
+            hit.health -= damage
             hit.vel = pg.Vector2(0, 0)
 
     def draw(self):

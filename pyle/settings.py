@@ -30,14 +30,30 @@ PLAYER_IMG = 'manBlue_gun.png'
 PLAYER_HIT_RECT = pg.Rect(0, 0, 35, 35)
 BARREL_OFFSET = pg.Vector2(30, 10)
 
-# Gun settings
+# Weapon settings
 BULLET_IMG = 'bullet.png'
-BULLET_SPEED = 500
-BULLET_LIFETIME = 1000
-BULLET_RATE = 150
-KICKBACK = 200
-GUN_SPREAD = 5
-BULLET_DAMAGE = 10
+WEAPONS = dict(
+    pistol=dict(
+        bullet_speed=500,
+        bullet_lifetime=1000,
+        bullet_size='large',
+        bullet_count=1,
+        damage=10,
+        rate=450,
+        spread=5,
+        kickback=200
+    ),
+    shotgun=dict(
+        bullet_speed=400,
+        bullet_lifetime=500,
+        bullet_size='small',
+        bullet_count=12,
+        damage=5,
+        rate=900,
+        spread=30,
+        kickback=300
+    )
+)
 
 # Mob settings
 MOB_IMG = 'zombie1_hold.png'
@@ -98,10 +114,11 @@ ZOMBIE_MOAN_SOUNDS = [
 ZOMBIE_DEATH_SOUNDS = [
     ['splat-15.wav', 0.3]
 ]
-WEAPON_SOUNDS_GUN = [
-    ['pistol.wav', 0.2]
-]
 EFFECTS_SOUNDS = {
     'level_start': ['level_start.wav', 0.15],
     'health_up': 'health_pack.wav'
 }
+WEAPON_SOUNDS = dict(
+    pistol=[['pistol.wav', 0.3]],
+    shotgun=[['shotgun.wav', 0.1]]
+)

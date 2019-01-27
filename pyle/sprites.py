@@ -3,14 +3,13 @@ import pygame as pg
 import pytweening as tween
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_ROTATION_SPEED
-from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT, KICKBACK
-from pyle.settings import MOB_SPEEDS, MOB_HIT_RECT, BULLET_SPEED
-from pyle.settings import BULLET_LIFETIME, BULLET_RATE, BARREL_OFFSET
-from pyle.settings import GUN_SPREAD, MOB_HEALTH, GREEN, YELLOW, RED
+from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT
+from pyle.settings import MOB_SPEEDS, MOB_HIT_RECT, BARREL_OFFSET
+from pyle.settings import MOB_HEALTH, GREEN, YELLOW, RED
 from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
 from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
 from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS, BOB_RANGE, BOB_SPEED
-from pyle.settings import DETECT_RADIUS, ZOMBIE_MOAN_CHANCE
+from pyle.settings import DETECT_RADIUS, ZOMBIE_MOAN_CHANCE, WEAPONS
 
 
 def collide_hit_rect(a, b):
@@ -79,6 +78,7 @@ class Player(pg.sprite.Sprite):
         self.rot_speed = 0
         self.last_shot = 0
         self.health = PLAYER_HEALTH
+        self.weapon = 'pistol'
 
     def update(self):
         self._handle_keys()
@@ -115,14 +115,44 @@ class Player(pg.sprite.Sprite):
 
     def _shoot(self):
         now = pg.time.get_ticks()
-        if now - self.last_shot > BULLET_RATE:
+        weapon = WEAPONS[self.weapon]
+        if now - self.last_shot > weapon['rate']:
             self.last_shot = now
-            pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
             dir = pg.Vector2(1, 0).rotate(-self.rot)
-            Bullet(self.game, pos, dir)
-            self.vel = pg.Vector2(-KICKBACK, 0).rotate(-self.rot)
-            random.choice(self.game.weapon_sounds['gun']).play()
+            pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
+            self.vel = pg.Vector2(-weapon['kickback'], 0).rotate(-self.rot)
+            for i in range(weapon['bullet_count']):
+                Bullet(self.game, pos, dir, weapon)
+                snd = random.choice(self.game.weapon_sounds[self.weapon])
+                if snd.get_num_channels() > 2:
+                    snd.stop()
+                snd.play()
             MuzzleFlash(self.game, pos)
+
+
+class Bullet(pg.sprite.Sprite):
+    def __init__(self, game, pos, dir, weapon):
+        self._layer = LAYER_BULLET
+        pg.sprite.Sprite.__init__(self, game.all_sprites, game.bullets)
+        self.game = game
+        self.weapon = weapon
+        self.image = game.bullet_images[weapon['bullet_size']]
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = pg.Vector2(pos)
+        self.rect.center = pos
+        spread = random.uniform(-weapon['spread'], weapon['spread'])
+        self.vel = dir.rotate(spread) * weapon['bullet_speed']
+        self.spawn_time = pg.time.get_ticks()
+
+    def update(self):
+        self.pos += self.vel * self.game.dt
+        self.rect.center = self.pos
+        if pg.sprite.spritecollideany(self, self.game.walls):
+            self.kill()
+        if pg.time.get_ticks() - self.spawn_time > \
+                self.weapon['bullet_lifetime']:
+            self.kill()
 
 
 class Wall(pg.sprite.Sprite):
@@ -154,8 +184,7 @@ class Mob(pg.sprite.Sprite):
         self._layer = LAYER_MOB
         pg.sprite.Sprite.__init__(self, game.all_sprites, game.mobs)
         self.game = game
-        self.image = self.game.mob_img.copy()
-        self.image_orig = self.image
+        self.image = game.mob_img.copy()
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.hit_rect = MOB_HIT_RECT.copy()
@@ -168,7 +197,7 @@ class Mob(pg.sprite.Sprite):
         self.health = MOB_HEALTH
         self.health_bar = None
         self.speed = random.choice(MOB_SPEEDS)
-        self.target = self.game.player
+        self.target = game.player
 
     def update(self):
         target_dist = self.target.pos - self.pos
@@ -176,7 +205,7 @@ class Mob(pg.sprite.Sprite):
             if random.random() < ZOMBIE_MOAN_CHANCE:
                 random.choice(self.game.zombie_moan_sounds).play()
             self.rot = target_dist.angle_to(pg.Vector2(1, 0))
-            self.image = pg.transform.rotate(self.image_orig, self.rot)
+            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = pg.Vector2(1, 0).rotate(-self.rot)
@@ -216,29 +245,6 @@ class Mob(pg.sprite.Sprite):
         width = int(self.rect.width * self.health / MOB_HEALTH)
         self.health_bar = pg.Rect(0, 0, width, 7)
         pg.draw.rect(self.image, color, self.health_bar)
-
-
-class Bullet(pg.sprite.Sprite):
-    def __init__(self, game, pos, dir):
-        self._layer = LAYER_BULLET
-        pg.sprite.Sprite.__init__(self, game.all_sprites, game.bullets)
-        self.game = game
-        self.image = self.game.bullet_img
-        self.rect = self.image.get_rect()
-        self.hit_rect = self.rect
-        self.pos = pos
-        self.rect.center = self.pos
-        spread = random.uniform(-GUN_SPREAD, GUN_SPREAD)
-        self.vel = dir.rotate(spread) * BULLET_SPEED
-        self.spawn_time = pg.time.get_ticks()
-
-    def update(self):
-        self.pos += self.vel * self.game.dt
-        self.rect.center = self.pos
-        if pg.sprite.spritecollideany(self, self.game.walls):
-            self.kill()
-        if pg.time.get_ticks() - self.spawn_time > BULLET_LIFETIME:
-            self.kill()
 
 
 class MuzzleFlash(pg.sprite.Sprite):
