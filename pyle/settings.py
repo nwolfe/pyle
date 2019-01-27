@@ -74,6 +74,7 @@ MUZZLE_FLASHES = [
     'whitePuff17.png',
     'whitePuff18.png',
 ]
+DAMAGE_ALPHA = [i for i in range(0, 255, 25)]
 
 # Layers
 LAYER_WALL = 1
@@ -85,7 +86,8 @@ LAYER_EFFECTS = 4
 
 # Items
 ITEM_IMAGES = {
-    'health': 'health_pack.png'
+    'health': 'health_pack.png',
+    'shotgun': 'obj_shotgun.png'
 }
 HEALTH_PACK_AMOUNT = 20
 BOB_RANGE = 15
@@ -116,9 +118,10 @@ ZOMBIE_DEATH_SOUNDS = [
 ]
 EFFECTS_SOUNDS = {
     'level_start': ['level_start.wav', 0.15],
-    'health_up': 'health_pack.wav'
+    'health_up': 'health_pack.wav',
+    'gun_pickup': ['gun_pickup.wav', 0.4]
 }
 WEAPON_SOUNDS = dict(
-    pistol=[['pistol.wav', 0.3]],
-    shotgun=[['shotgun.wav', 0.1]]
+    pistol=[['pistol.wav', 0.2]],
+    shotgun=[['shotgun.wav', 0.3]]
 )

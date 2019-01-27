@@ -79,9 +79,7 @@ class Game:
     def __init__(self):
         pg.mixer.pre_init(44100, -16, 1, 2048)
         pg.init()
-        pg.mixer.init()
         pg.display.set_caption(TITLE)
-        pg.key.set_repeat(500, 100)
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         self.clock = pg.time.Clock()
         self.dt = None
@@ -215,9 +213,13 @@ class Game:
         hits = pg.sprite.spritecollide(self.player, self.items, False)
         for hit in hits:
             if hit.type == 'health' and self.player.health < PLAYER_HEALTH:
+                hit.kill()
                 self.effect_sounds['health_up'].play()
                 self.player.add_health(HEALTH_PACK_AMOUNT)
+            if hit.type == 'shotgun':
                 hit.kill()
+                self.effect_sounds['gun_pickup'].play()
+                self.player.weapon = 'shotgun'
 
         # mobs hit player
         hits = pg.sprite.spritecollide(
@@ -230,6 +232,7 @@ class Game:
             if self.player.health <= 0:
                 self.playing = False
         if hits:
+            self.player.hit()
             self.player.pos += pg.Vector2(
                 MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
 

@@ -1,11 +1,12 @@
 import random
+import itertools
 import pygame as pg
 import pytweening as tween
 import xml.etree.ElementTree as xml
 from pyle.settings import PLAYER_SPEED, PLAYER_ROTATION_SPEED
 from pyle.settings import TILESIZE, BLACK, PLAYER_HIT_RECT
 from pyle.settings import MOB_SPEEDS, MOB_HIT_RECT, BARREL_OFFSET
-from pyle.settings import MOB_HEALTH, GREEN, YELLOW, RED
+from pyle.settings import MOB_HEALTH, GREEN, YELLOW, RED, DAMAGE_ALPHA
 from pyle.settings import PLAYER_HEALTH, AVOID_RADIUS, FLASH_DURATION
 from pyle.settings import LAYER_WALL, LAYER_PLAYER, LAYER_BULLET, LAYER_MOB
 from pyle.settings import LAYER_EFFECTS, LAYER_ITEMS, BOB_RANGE, BOB_SPEED
@@ -67,7 +68,6 @@ class Player(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, game.all_sprites)
         self.game = game
         self.image = self.game.player_img
-        self.image_orig = self.image
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.hit_rect = PLAYER_HIT_RECT
@@ -78,12 +78,20 @@ class Player(pg.sprite.Sprite):
         self.rot_speed = 0
         self.last_shot = 0
         self.health = PLAYER_HEALTH
+        self.damaged = False
+        self.damage_alpha = None
         self.weapon = 'pistol'
 
     def update(self):
         self._handle_keys()
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
-        self.image = pg.transform.rotate(self.image_orig, self.rot)
+        self.image = pg.transform.rotate(self.game.player_img, self.rot)
+        if self.damaged:
+            try:
+                self.image.fill((255, 0, 0, next(self.damage_alpha)),
+                                special_flags=pg.BLEND_RGBA_MULT)
+            except Exception:
+                self.damaged = False
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
         self.pos += self.vel * self.game.dt
@@ -93,6 +101,10 @@ class Player(pg.sprite.Sprite):
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
 
+    def hit(self):
+        self.damaged = True
+        self.damage_alpha = itertools.chain(DAMAGE_ALPHA * 2)
+
     def add_health(self, amount):
         self.health += amount
         if self.health > PLAYER_HEALTH:
@@ -100,7 +112,7 @@ class Player(pg.sprite.Sprite):
 
     def _handle_keys(self):
         self.rot_speed = 0
-        self.vel = pg.math.Vector2(0, 0)
+        self.vel = pg.Vector2(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT] or keys[pg.K_a]:
             self.rot_speed = PLAYER_ROTATION_SPEED
@@ -143,6 +155,7 @@ class Bullet(pg.sprite.Sprite):
         self.rect.center = pos
         spread = random.uniform(-weapon['spread'], weapon['spread'])
         self.vel = dir.rotate(spread) * weapon['bullet_speed']
+        self.vel *= random.uniform(0.9, 1.1)
         self.spawn_time = pg.time.get_ticks()
 
     def update(self):
