@@ -4,7 +4,7 @@ import random
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
-from pyle.settings import LIGHTGREY, MOB_DAMAGE, CYAN, WEAPONS
+from pyle.settings import LIGHTGREY, MOB_DAMAGE, CYAN, BLACK
 from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
 from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG
 from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS
@@ -98,6 +98,7 @@ class Game:
 
         # Resources from disk
         self.title_font = None
+        self.hud_font = None
         self.dim_screen = None
         self.spritesheet_characters = None
         self.map = None
@@ -119,20 +120,18 @@ class Game:
     def load_data(self):
         # Images and maps
         self.title_font = os.path.join(IMG_DIR, 'ZOMBIE.TTF')
+        self.hud_font = os.path.join(IMG_DIR, 'Impacted2.0.ttf')
         self.dim_screen = pg.Surface(self.screen.get_size()).convert_alpha()
         self.dim_screen.fill((0, 0, 0, 180))
         self.spritesheet_characters = Spritesheet(
             os.path.join(IMG_DIR, 'spritesheet_characters.png'))
         self.map = TiledMap(os.path.join(MAP_DIR, 'level1.tmx'))
-        self.map_img = self.map.make_map()
-        self.map_rect = self.map_img.get_rect()
         self.player_img = self.spritesheet_characters.get_image(PLAYER_IMG)
         self.mob_img = self.spritesheet_characters.get_image(MOB_IMG)
         self.wall_img = load_image(WALL_IMG, scale=(TILESIZE, TILESIZE))
         self.bullet_images = dict(
             large=load_image(BULLET_IMG),
-            small=load_image(BULLET_IMG, scale=(10, 10))
-        )
+            small=load_image(BULLET_IMG, scale=(10, 10)))
         self.splat_img = load_image(SPLAT_IMG, scale=(64, 64))
         self.gun_flashes = []
         for i in MUZZLE_FLASHES:
@@ -162,6 +161,8 @@ class Game:
                 self.weapon_sounds[w].append(load_sound(s))
 
     def new(self):
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
@@ -209,6 +210,10 @@ class Game:
     def update(self):
         self.all_sprites.update()
         self.camera.update(self.player)
+        # game over?
+        if len(self.mobs) == 0:
+            self.playing = False
+
         # player hits items
         hits = pg.sprite.spritecollide(self.player, self.items, False)
         for hit in hits:
@@ -238,10 +243,10 @@ class Game:
 
         # bullets hit mobs
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
-        for hit in hits:
-            damage = WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
-            hit.health -= damage
-            hit.vel = pg.Vector2(0, 0)
+        for mob in hits:
+            for bullet in hits[mob]:
+                mob.health -= bullet.weapon['damage']
+            mob.vel = pg.Vector2(0, 0)
 
     def draw(self):
         pg.display.set_caption("FPS: {:.2f}".format(self.clock.get_fps()))
@@ -263,6 +268,8 @@ class Game:
         # HUD functions
         draw_player_health(self.screen, 10, 10,
                            self.player.health / PLAYER_HEALTH)
+        self._draw_text("Zombies: %s" % len(self.mobs), self.hud_font, 30,
+                        WHITE, WIDTH - 10, 10, align="ne")
         if self.paused:
             self.screen.blit(self.dim_screen, (0, 0))
             self._draw_text("Paused", self.title_font, 105, RED,
@@ -315,7 +322,25 @@ class Game:
         pass
 
     def show_gameover_screen(self):
-        pass
+        self.screen.fill(BLACK)
+        self._draw_text('GAME OVER', self.title_font, 100, RED,
+                        WIDTH / 2, HEIGHT / 2, align="center")
+        self._draw_text('Press any key to start', self.title_font, 75, WHITE,
+                        WIDTH / 2, HEIGHT * 3 / 4, align="center")
+        pg.display.flip()
+        self.wait_for_keypress()
+
+    def wait_for_keypress(self):
+        pg.event.wait()
+        waiting = True
+        while waiting:
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False
+                    self.quit()
+                if event.type == pg.KEYUP:
+                    waiting = False
 
 
 g = Game()
