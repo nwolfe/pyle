@@ -4,10 +4,10 @@ import random
 import pygame as pg
 from pyle.settings import TITLE, WIDTH, HEIGHT, FPS, GREEN, YELLOW, RED
 from pyle.settings import TILESIZE, WALL_IMG, BULLET_IMG, MOB_KNOCKBACK
-from pyle.settings import LIGHTGREY, MOB_DAMAGE, CYAN, BLACK
+from pyle.settings import LIGHTGREY, MOB_DAMAGE, CYAN, BLACK, NIGHT_COLOR
 from pyle.settings import WHITE, PLAYER_HEALTH, MUZZLE_FLASHES, ITEM_IMAGES
-from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG
-from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS
+from pyle.settings import HEALTH_PACK_AMOUNT, MOB_IMG, PLAYER_IMG, LIGHT_MASK
+from pyle.settings import BG_MUSIC, EFFECTS_SOUNDS, WEAPON_SOUNDS, LIGHT_RADIUS
 from pyle.settings import ZOMBIE_MOAN_SOUNDS, ZOMBIE_DEATH_SOUNDS, SPLAT_IMG
 from pyle.settings import PLAYER_HIT_SOUNDS, PLAYER_HIT_SOUND_CHANCE
 from pyle.sprites import Player, Spritesheet, Mob, Obstacle, collide_hit_rect
@@ -95,6 +95,7 @@ class Game:
         self.items = None
         self.draw_debug = None
         self.paused = None
+        self.night = None
 
         # Resources from disk
         self.title_font = None
@@ -110,6 +111,9 @@ class Game:
         self.splat_img = None
         self.gun_flashes = None
         self.item_images = None
+        self.fog = None
+        self.light_mask = None
+        self.light_rect = None
         self.effect_sounds = None
         self.weapon_sounds = None
         self.zombie_moan_sounds = None
@@ -139,6 +143,12 @@ class Game:
         self.item_images = {}
         for i in ITEM_IMAGES:
             self.item_images[i] = load_image(ITEM_IMAGES[i])
+
+        # Lighting effect / Fog of war
+        self.fog = pg.Surface((WIDTH, HEIGHT))
+        self.fog.fill(NIGHT_COLOR)
+        self.light_mask = load_image(LIGHT_MASK, scale=LIGHT_RADIUS)
+        self.light_rect = self.light_mask.get_rect()
 
         # Sounds and music
         pg.mixer_music.load(os.path.join(MUSIC_DIR, BG_MUSIC))
@@ -191,6 +201,7 @@ class Game:
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
         self.paused = False
+        self.night = False
         self.effect_sounds['level_start'].play()
 
     def run(self):
@@ -265,6 +276,10 @@ class Game:
             for wall in self.walls:
                 pg.draw.rect(self.screen, CYAN,
                              self.camera.apply_rect(wall.rect), 1)
+
+        if self.night:
+            self._draw_fog()
+
         # HUD functions
         draw_player_health(self.screen, 10, 10,
                            self.player.health / PLAYER_HEALTH)
@@ -275,6 +290,13 @@ class Game:
             self._draw_text("Paused", self.title_font, 105, RED,
                             WIDTH / 2, HEIGHT / 2, align="center")
         pg.display.flip()
+
+    def _draw_fog(self):
+        # draw the light mask (gradient) onto fog image
+        self.fog.fill(NIGHT_COLOR)
+        self.light_rect.center = self.camera.apply(self.player).center
+        self.fog.blit(self.light_mask, self.light_rect)
+        self.screen.blit(self.fog, (0, 0), special_flags=pg.BLEND_MULT)
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -317,6 +339,8 @@ class Game:
                     self.draw_debug = not self.draw_debug
                 if event.key == pg.K_p:
                     self.paused = not self.paused
+                if event.key == pg.K_n:
+                    self.night = not self.night
 
     def show_start_screen(self):
         pass

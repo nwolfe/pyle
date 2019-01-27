@@ -75,6 +75,9 @@ MUZZLE_FLASHES = [
     'whitePuff18.png',
 ]
 DAMAGE_ALPHA = [i for i in range(0, 255, 25)]
+NIGHT_COLOR = (20, 20, 20)
+LIGHT_RADIUS = (500, 500)
+LIGHT_MASK = 'light_350_med.png'
 
 # Layers
 LAYER_WALL = 1
